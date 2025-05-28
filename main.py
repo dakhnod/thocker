@@ -8,14 +8,12 @@ import argparse
 parser = argparse.ArgumentParser(description='Thermal Camera Person Detection')
 parser.add_argument('--verbose', '-v', help='Display the warm pixel count', action='store_true')
 parser.add_argument('--bus', '-b', type=int, required=True, help='I2C bus number (default: 7)')
-parser.add_argument('--threshold', '-t', type=int, default=4, help='Warm pixel cound threshold')
+parser.add_argument('--threshold', '-t', type=int, default=5, help='Warm pixel temp threshold')
+parser.add_argument('--count', '-c', type=int, default=4, help='Warm pixel count threshold')
 parser.add_argument('--cmd-absence', '-a', type=str, default=[], help='Command to run when no person is detected', action='append')
 parser.add_argument('--cmd-presence', '-p', type=str, default=[], help='Command to run when a person is detected', action='append')
 
 args = parser.parse_args()
-
-THRESHOLD = 5
-ROW = 2
 
 bus = smbus2.SMBus(args.bus)
 
@@ -79,7 +77,7 @@ while True:
     for x in range(8):
         for y in range(8):
             temp = get_temp(y, x)
-            if temp < THRESHOLD:
+            if temp < args.threshold:
                 pass
                 # img[x, y] = 0
             else:
@@ -96,7 +94,7 @@ while True:
 
     # person_count = len(blobs)
 
-    person_count = 1 if (warm_pixels > 3) else 0
+    person_count = 1 if (warm_pixels > args.count) else 0
 
     if person_count is not last_person_count:
         last_person_count = person_count
