@@ -2,16 +2,13 @@ import smbus2
 import time
 import struct
 import subprocess
+import numpy
 import argparse
+import cv2
 
 parser = argparse.ArgumentParser(description='Thermal Camera Person Detection')
-parser.add_argument('--verbose', '-v', help='Display the warm pixel count', action='store_true')
 parser.add_argument('--bus', '-b', required=True, help='I2C bus number path')
 parser.add_argument('--threshold', '-t', type=int, default=5, help='Warm pixel temp threshold')
-parser.add_argument('--count', '-c', type=int, default=4, help='Warm pixel count threshold')
-parser.add_argument('--cmd-absence', '-a', type=str, default=[], help='Command to run when no person is detected', action='append')
-parser.add_argument('--cmd-presence', '-p', type=str, default=[], help='Command to run when a person is detected', action='append')
-
 args = parser.parse_args()
 
 bus = smbus2.SMBus(args.bus)
@@ -25,6 +22,8 @@ bus.write_byte_data(0x69, 7, 1 << 5)
 time.sleep(0.1)
 
 last_person_count = 1
+
+img = numpy.zeros((8, 8), dtype=numpy.uint8)
     
 while True:
     pixel_count = 64
@@ -56,31 +55,16 @@ while True:
         for y in range(8):
             temp = get_temp(y, x)
             if temp < args.threshold:
-                pass
+                img[x, y] = 0
             else:
-                warm_pixels += 1
+                img[x, y] = 255
 
-    if args.verbose:
-        print(f'Warm pixels: {warm_pixels}')
+    cv2.imshow("Thermal Image", img)
+    cv2.waitKey(1)
 
-    # Why do we need a person count instead of a boolean?
-    # Initially, I was trying to use blob detection to react to multiple persons.
-    # Then, I switched to boolean detection, but I wanted to keep the warm memory.
-    person_count = 1 if (warm_pixels > args.count) else 0
-
-    if person_count is not last_person_count:
-        last_person_count = person_count
-
-        print(f'Person present: {person_count}')
-
-        if person_count == 0:
-            for cmd in args.cmd_absence:
-                subprocess.run(cmd, shell=True)
-        elif person_count == 1:
-            for cmd in args.cmd_presence:
-                subprocess.run(cmd, shell=True)
 
     try:
         time.sleep(1)
     except:
+        cv2.destroyAllWindows()
         break
