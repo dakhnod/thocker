@@ -1,0 +1,1 @@
+../VL53L7/VL53L7CX_Linux_driver_2.0.0/user/api/vl53l7cx.pyi
